@@ -6,6 +6,8 @@ This folder aims to create a version for testing MONAN with GFS at Egeon.
 
 ## History: ##
 
+in develop ERA5_feature
+
 **1.3.0**
 - This version was created to work in operational runs.
 - Adjusted to run using 16 nodes and 1024 cores.
