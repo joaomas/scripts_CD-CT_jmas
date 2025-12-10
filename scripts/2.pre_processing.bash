@@ -108,8 +108,15 @@ fi
 
 
 # Degrib phase:---------------------------------------------------------------------
-echo -e  "${GREEN}==>${NC} Running Degrib:\n"
+echo -e  "${GREEN}==>${NC} Starting Degrib Phase :\n"
+if [ ${EXP} == "ERA" ]
+then
+   echo -e  "${GREEN}==>${NC} Running Degrib ERA :\n"
+   time ./make_degrib_era5.bash ${EXP} ${RES} ${YYYYMMDDHHi} ${FCST}
+else
+   echo -e  "${GREEN}==>${NC} Running Degrib GFS :\n"
 time ./make_degrib.bash ${EXP} ${RES} ${YYYYMMDDHHi} ${FCST}
+fi  
 #----------------------------------------------------------------------------------
 
 
@@ -118,7 +125,7 @@ time ./make_degrib.bash ${EXP} ${RES} ${YYYYMMDDHHi} ${FCST}
 # Init Atmosphere phase:------------------------------------------------------------
 echo -e  "${GREEN}==>${NC} Running Init Atmosphere...\n"
 time ./make_initatmos.bash ${EXP} ${RES} ${YYYYMMDDHHi} ${FCST}
-#----------------------------------------------------------------------------------
+
 
 
 
