@@ -29,9 +29,9 @@ then
    echo "FCST        :: Forecast hours, e.g.: 24 or 36, etc."
    echo ""
    echo "24 hour forecast example for 24km:"
-   echo "${0} GFS 1024002 2024010100 24"
+   echo "${0} GFS ou ERA  1024002 2024010100 24"
    echo "48 hour forecast example for 120km:"
-   echo "${0} GFS   40962 2024010100 48"
+   echo "${0} GFS ou ERA   40962 2024010100 48"
    echo ""
 
    exit
@@ -43,7 +43,8 @@ echo -e "\033[1;32m==>\033[0m Moduling environment for MONAN model...\n"
 . setenv.bash
 
 echo ""
-echo "---- Run Model ----"
+echo -e  "${GREEN}==>${NC} Starting Model Phase :\n"
+echo -e  "${GREEN}==>${NC} Running Model  ${EXP} :\n"
 echo ""
 
 
@@ -59,7 +60,7 @@ EXECS=${DIRHOMED}/execs;               mkdir -p ${EXECS}
 
 
 # Input variables:--------------------------------------
-EXP=${1};         #EXP=GFS
+EXP=${1};         #EXP=GFS ou ERA
 RES=${2};         #RES=1024002
 YYYYMMDDHHi=${3}; #YYYYMMDDHHi=2024012000
 FCST=${4};        #FCST=6
@@ -152,13 +153,13 @@ cp -f ${EXECS}/atmosphere_model ${DIRRUN}
 cp -f ${DATAIN}/fixed/*TBL ${DIRRUN}
 cp -f ${DATAIN}/fixed/*DBL ${DIRRUN}
 cp -f ${DATAIN}/fixed/*DATA ${DIRRUN}
-cp -f ${DATAIN}/fixed/x1.${RES}.static.nc ${DIRRUN}
+#cp -f ${DATAIN}/fixed/x1.${RES}.static.nc ${DIRRUN}
 cp -f ${DATAIN}/fixed/x1.${RES}.graph.info.part.${cores} ${DIRRUN}
 cp -f ${DATAOUT}/${YYYYMMDDHHi}/Pre/x1.${RES}.init.nc ${DIRRUN}
-cp -f ${DATAIN}/fixed/Vtable.GFS ${DIRRUN}
+#cp -f ${DATAIN}/fixed/Vtable.GFS ${DIRRUN}
 
 
-if [ ${EXP} = "GFS" ]
+if [[ "${EXP}" == "GFS" || "${EXP}" == "ERA" ]]
 then
    sed -e "s,#LABELI#,${start_date},g;s,#FCSTS#,${DD_HHMMSS_forecast},g;s,#RES#,${RES},g;
 s,#CONFIG_DT#,${CONFIG_DT},g;s,#CONFIG_LEN_DISP#,${CONFIG_LEN_DISP},g;s,#CONFIG_CONV_INTERVAL#,${CONFIG_CONV_INTERVAL},g" \
@@ -193,6 +194,8 @@ then
 else
    echo "#!/bin/bash " > ${DIRRUN}/model.bash 
 fi
+
+
 
 cat << EOF0 >> ${DIRRUN}/model.bash 
 
