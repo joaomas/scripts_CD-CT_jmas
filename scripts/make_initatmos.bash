@@ -92,11 +92,12 @@ do
 done
 
 
-sed -e "s,#LABELI#,${start_date},g;s,#GEODAT#,${GEODATA},g;s,#RES#,${RES},g" \
+sed -e "s,#LABELI#,${start_date},g;s,#GEODAT#,${GEODATA},g;s,#RES#,${RES},g;s,#EXP#,${EXP},g" \
 	 ${SCRIPTS}/namelists/namelist.init_atmosphere.TEMPLATE > ${DIRRUN}/namelist.init_atmosphere
 
 sed -e "s,#RES#,${RES},g" \
     ${SCRIPTS}/namelists/streams.init_atmosphere.TEMPLATE > ${DIRRUN}/streams.init_atmosphere
+
 
 
 cp -f ${DATAIN}/fixed/x1.${RES}.graph.info.part.${cores} ${DIRRUN}
@@ -109,6 +110,7 @@ chmod 755 ${DIRRUN}/*
 chmod 755 ${DATAOUT}/${YYYYMMDDHHi}/Pre/*
 
 rm -f ${DIRRUN}/initatmos.bash 
+
 
 
 if [ ${SCHEDULER_SYSTEM} != "GENERIC" ]
