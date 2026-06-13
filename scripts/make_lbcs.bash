@@ -1,0 +1,188 @@
+#!/bin/bash 
+
+
+if [ $# -ne 4 ]
+then
+   echo ""
+   echo "Instructions: execute the command below"
+   echo ""
+   echo "${0} EXP_NAME RESOLUTION LABELI FCST"
+   echo ""
+   echo "EXP_NAME    :: Forcing: GFS or ERA5"
+   echo "            :: Others options to be added later..."
+   echo "RESOLUTION  :: number of points in resolution model grid, e.g: 1024002  (24 km)"
+   echo "LABELI      :: Initial date YYYYMMDDHH, e.g.: 2024010100"
+   echo "FCST        :: Forecast hours, e.g.: 24 or 36, etc."
+   echo ""
+   echo "24 hour forcast example:"
+   echo "${0} GFS 1024002 2024010100 24"
+   echo ""
+
+   exit
+fi
+
+# Set environment variables exports:
+echo ""
+echo -e "\033[1;32m==>\033[0m Moduling environment for MONAN model...\n"
+. setenv.bash
+
+
+# Standart directories variables:---------------------------------------
+DIRHOMES=${DIR_SCRIPTS}/scripts_CD-CT; mkdir -p ${DIRHOMES}  
+DIRHOMED=${DIR_DADOS}/scripts_CD-CT;   mkdir -p ${DIRHOMED}  
+SCRIPTS=${DIRHOMES}/scripts;           mkdir -p ${SCRIPTS}
+DATAIN=${DIRHOMED}/datain;             mkdir -p ${DATAIN}
+DATAOUT=${DIRHOMED}/dataout;           mkdir -p ${DATAOUT}
+SOURCES=${DIRHOMES}/sources;           mkdir -p ${SOURCES}
+EXECS=${DIRHOMED}/execs;               mkdir -p ${EXECS}
+#----------------------------------------------------------------------
+
+
+# Input variables:--------------------------------------
+EXP=${1};         #EXP=GFS
+RES=${2};         #RES=1024002
+YYYYMMDDHHi=${3}; #YYYYMMDDHHi=2024012000
+FCST=${4};        #FCST=24
+#-------------------------------------------------------
+
+# Local variables--------------------------------------
+start_date=${YYYYMMDDHHi:0:4}-${YYYYMMDDHHi:4:2}-${YYYYMMDDHHi:6:2}_${YYYYMMDDHHi:8:2}:00:00
+yyyymmddi=${YYYYMMDDHHi:0:8}
+hhi=${YYYYMMDDHHi:8:2}
+yyyymmddhhf=$(date +"%Y%m%d%H" -d "${yyyymmddi} ${hhi}:00 ${FCST} hours" )
+final_date=${yyyymmddhhf:0:4}-${yyyymmddhhf:4:2}-${yyyymmddhhf:6:2}_${yyyymmddhhf:8:2}:00:00
+GEODATA=${DATAIN}/WPS_GEOG
+cores=${INITATMOS_ncores}
+export DIRRUN=${DIRHOMED}/run.${YYYYMMDDHHi}; rm -fr ${DIRRUN}; mkdir -p ${DIRRUN}
+#-------------------------------------------------------
+mkdir -p ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs
+
+if [ ! -s ${DATAIN}/fixed/${RES}.graph.info.part.${cores} ]
+then
+   if [[ ${RES} == x1.* ]]
+   then
+      if [ ! -s ${DATAIN}/fixed/${RES}.graph.info ]
+      then
+         cd ${DATAIN}/fixed
+         echo -e "${GREEN}==>${NC} downloading meshes tgz files ... \n"
+         wget https://www2.mmm.ucar.edu/projects/mpas/atmosphere_meshes/${RES}.tar.gz
+         wget https://www2.mmm.ucar.edu/projects/mpas/atmosphere_meshes/${RES}_static.tar.gz
+         tar -xzvf ${RES}.tar.gz
+         tar -xzvf ${RES}_static.tar.gz
+      fi
+      echo -e "${GREEN}==>${NC} Creating ${RES}.graph.info.part.${cores} ... \n"
+      cd ${DATAIN}/fixed
+      gpmetis -minconn -contig -niter=200 ${RES}.graph.info ${cores}
+      rm -fr ${RES}.tar.gz ${RES}_static.tar.gz
+   else
+      echo -e "${GREEN}==>${NC} Creating ${RES}.graph.info.part.${cores} ... \n"
+      cd ${DATAIN}/fixed
+      gpmetis -minconn -contig -niter=200 ${RES}.graph.info ${cores}
+   fi
+fi
+
+files_needed=("${SCRIPTS}/namelists/namelist.init_atmosphere.LBCS" "${SCRIPTS}/namelists/streams.init_atmosphere.LBCS" "${DATAIN}/fixed/${RES}.graph.info.part.${cores}" "${DATAOUT}/${YYYYMMDDHHi}/Pre/${RES}.init.nc" "${EXECS}/init_atmosphere_model")
+for file in "${files_needed[@]}"
+do
+  if [ ! -s "${file}" ]
+  then
+    echo -e  "\n${RED}==>${NC} ***** ATTENTION *****\n"	  
+    echo -e  "${RED}==>${NC} [${0}] At least the file ${file} was not generated. \n"
+    exit -1
+  fi
+done
+
+
+sed -e "s,#LABELI#,${start_date},g;s,#LABELF#,${final_date},g;s,#GEODAT#,${GEODATA},g;s,#LBCINT#,${LBCINT},g;s,#RES#,${RES},g;s,#EXP#,${EXP},g" \
+	 ${SCRIPTS}/namelists/namelist.init_atmosphere.LBCS > ${DIRRUN}/namelist.init_atmosphere
+
+sed -e "s,#RES#,${RES},g;s,#LBCINT#,${LBCINT},g" \
+    ${SCRIPTS}/namelists/streams.init_atmosphere.LBCS > ${DIRRUN}/streams.init_atmosphere
+
+
+cp -f ${DATAIN}/fixed/${RES}.graph.info.part.${cores} ${DIRRUN}
+cp -f ${DATAOUT}/${YYYYMMDDHHi}/Pre/${RES}.init.nc ${DIRRUN}
+cp -f ${DATAOUT}/${YYYYMMDDHHi}/Pre/${EXP}\:* ${DIRRUN}
+cp -f ${EXECS}/init_atmosphere_model ${DIRRUN}
+
+
+cp -f ${SCRIPTS}/setenv.bash ${DIRRUN}
+rm -f ${DIRRUN}/lbcs.bash 
+
+if [ ${SCHEDULER_SYSTEM} != "GENERIC" ]
+then
+   sed -e "s,#JOBNAME#,${DEGRIB_jobname},g;
+   s,#NNODES#,${LBCS_nnodes},g;
+   s,#NCPUS#,${LBCS_ncpus},g;
+   s,#NTASKS#,${LBCS_ncores},g;
+   s,#NTASKSPNODE#,${LBCS_ncpn},g;
+   s,#NTHREADS#,${LBCS_nthreads},g;
+   s,#PARTITION#,${LBCS_QUEUE},g;
+   s,#WALLTIME#,${LBCS_walltime},g;
+   s,#OUTPUTJOB#,${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.o,g;
+   s,#ERRORJOB#,${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.e,g" \
+   ${SCRIPTS}/stools/submit_${SYSTEM_KEY}.bash_TEMPLATE > ${DIRRUN}/lbcs.bash 
+else
+   echo "#!/bin/bash " > ${DIRRUN}/lbcs.bash 
+fi
+
+cat << EOF0 > ${DIRRUN}/lbcs.bash 
+
+export executable=init_atmosphere_model
+
+ulimit -c unlimited
+ulimit -v unlimited
+ulimit -s unlimited
+
+
+. $(pwd)/setenv.bash
+
+cd ${DIRRUN}
+
+
+date
+time mpirun -np \${SLURM_NTASKS} ./\${executable}
+date
+
+mv ${DIRRUN}/log.init_atmosphere.0000.out ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/log.init_atmosphere.0000.${RES}.lbcs.nc.${YYYYMMDDHHi}.out
+mv ${DIRRUN}/namelist.init_atmosphere ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/namelist.init_atmosphere.lbcs
+mv ${DIRRUN}/streams.init_atmosphere ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/streams.init_atmosphere.lbcs
+mv ${DIRRUN}/${RES}.init.nc ${DATAOUT}/${YYYYMMDDHHi}/Pre
+mv ${DIRRUN}/lbc*.nc ${DATAOUT}/${YYYYMMDDHHi}/Pre
+
+EOF0
+chmod a+x ${DIRRUN}/lbcs.bash
+
+case "${SCHEDULER_SYSTEM}" in
+   SLURM)
+      echo -e  "${GREEN}==>${NC} Sbatch lbcs.bash...\n"
+      cd ${DIRRUN}
+      sbatch --wait ${DIRRUN}/lbcs.bash
+      ;;
+    PBS)
+      echo -e  "${GREEN}==>${NC} qsub lbcs.bash...\n"
+      cd ${DIRRUN}
+      qsub -W block=true ${DIRRUN}/lbcs.bash
+      ;;
+#    GENERIC)
+#      echo "Nenhum gerenciador detectado"
+#      cd ${DIRRUN}
+#      ${DIRRUN}/lbcs.bash
+#      ;;
+esac
+
+echo -e  "${GREEN}==>${NC} Executing sbatch lbcs.bash...\n"
+cd ${DIRRUN}
+
+mv ${DIRRUN}/lbcs.bash ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs
+
+if [ -z "$(ls ${DATAOUT}/${YYYYMMDDHHi}/Pre/lbc* 2>/dev/null)" ]
+then
+  echo -e  "\n${RED}==>${NC} ***** ATTENTION *****\n"	
+  echo -e  "${RED}==>${NC} LBC phase fails! Check logs at ${DATAOUT}/logs/lbcs.* .\n"
+  echo -e  "${RED}==>${NC} Exiting script. \n"
+  exit -1
+fi
+chmod 775 ${DATAOUT}/${YYYYMMDDHHi}/Pre/*
+
+rm -fr ${DIRRUN}

@@ -1,7 +1,6 @@
 #!/bin/bash 
 umask 022
 
-
 if [ $# -ne 4 ]
 then
    echo ""
@@ -59,8 +58,6 @@ export DIRRUN=${DIRHOMED}/run.${YYYYMMDDHHi}; rm -fr ${DIRRUN}; mkdir -p ${DIRRU
 mkdir -p ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs
 
 
-
-
 if [ ! -s ${DATAIN}/fixed/x1.${RES}.graph.info.part.${cores} ]
 then
    if [ ! -s ${DATAIN}/fixed/x1.${RES}.graph.info ]
@@ -91,8 +88,13 @@ do
   fi
 done
 
+if [[ $MODERUN == "R" ]]; then
+   BLEND_BDY_TERRAIN=true
+else
+   BLEND_BDY_TERRAIN=false
+fi
 
-sed -e "s,#LABELI#,${start_date},g;s,#GEODAT#,${GEODATA},g;s,#RES#,${RES},g" \
+sed -e "s,#LABELI#,${start_date},g;s,#GEODAT#,${GEODATA},g;s,#RES#,${RES},g;s,#BLEND_BDY_TERRAIN#,${BLEND_BDY_TERRAIN},g" \
 	 ${SCRIPTS}/namelists/namelist.init_atmosphere.TEMPLATE > ${DIRRUN}/namelist.init_atmosphere
 
 sed -e "s,#RES#,${RES},g" \

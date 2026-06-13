@@ -8,10 +8,10 @@ umask 022
 #     
 #     Performs the following tasks:
 # 
-#        o VCheck all input files before 
-#        o Creates the submition script
+#        o Check all input files before 
+#        o Creates the submission script
 #        o Submit the model
-#        o Veriffy all files generated
+#        o Verify all files generated
 #        
 #
 #-----------------------------------------------------------------------------#
@@ -23,7 +23,7 @@ then
    echo ""
    echo "${0} [EXP_NAME/OP] RESOLUTION LABELI FCST"
    echo ""
-   echo "EXP_NAME    :: Forcing: GFS"
+   echo "EXP_NAME    :: Forcing: GFS or ERA5"
    echo "RESOLUTION  :: number of points in resolution model grid, e.g: 1024002  (24 km)"
    echo "LABELI      :: Initial date YYYYMMDDHH, e.g.: 2024010100"
    echo "FCST        :: Forecast hours, e.g.: 24 or 36, etc."
@@ -89,30 +89,49 @@ printf -v t_strout "%02d:%02d:%02d" "$h" "$m" "$s"
 # From now on, CONFI_LEN_DISP becames cte = 0.0, pickin up this value from static file.
 
 # Calculating default parameters for different resolutions
-if [ $RES -eq 1024002 ]; then  #24Km
+if [ $RES -eq 40962 ]; then      #120Km
+   CONFIG_DT=600.0
+   CONFIG_CONV_INTERVAL="00:15:00"
+elif [ $RES -eq 163842 ]; then   #60Km
+   CONFIG_DT=300.0
+   CONFIG_CONV_INTERVAL="00:15:00"
+elif [ $RES -eq 655362 ]; then   #30Km
+   CONFIG_DT=150.0
+   CONFIG_CONV_INTERVAL="00:15:00"
+elif [ $RES -eq 1024002 ]; then  #24Km
    CONFIG_DT=150.0
    CONFIG_CONV_INTERVAL="00:15:00"
 elif [ $RES -eq 2621442 ]; then  #15Km
    CONFIG_DT=90.0
    CONFIG_CONV_INTERVAL="00:15:00"
-elif [ $RES -eq 40962 ]; then  #120Km
-   CONFIG_DT=600.0
-   CONFIG_CONV_INTERVAL="00:15:00"
-elif [ $RES -eq 163842 ]; then  #60Km
-   CONFIG_DT=300.0
-   CONFIG_CONV_INTERVAL="00:15:00"
-elif [ $RES -eq 655362 ]; then  #30Km
-   CONFIG_DT=150.0
-   CONFIG_CONV_INTERVAL="00:15:00"
 elif [ $RES -eq 5898242 ]; then  #10Km
    CONFIG_DT=60.0
+   CONFIG_CONV_INTERVAL="00:15:00"
+elif [ $RES -eq 23592962 ]; then  #5km
+   CONFIG_DT=30.0
    CONFIG_CONV_INTERVAL="00:15:00"
 elif [ $RES -eq 65536002 ]; then  #3Km
    CONFIG_DT=18.0
    CONFIG_CONV_INTERVAL="00:15:00"
+else
+    echo -e  "\n${RED}==>${NC} ***** ATTENTION *****\n"
+    echo -e  "${RED}==>${NC} [${0}] Simulation parameters for resolution $RES have not been set! Edit them in '3.run_model.bash'.\n"
+    exit -1
 fi
 #-------------------------------------------------------
 
+# Setting configuration to apply or not lateral boundary conditions
+if [[ $MODERUN == "R" ]]; then
+   APPLY_LBCS=true
+elif [[ $MODERUN == "G" ]]; then
+   APPLY_LBCS=false
+else
+   echo -e  "\n${RED}==>${NC} ***** ATTENTION *****\n"
+   echo -e  "${RED}==>${NC} Atmosphere phase fails! Please select MODERUN=R (Regional) or MODERUN=G (Global) in 'setenv.bash' so that MONAN knows whether to read or not lateral boundary conditions.\n"
+   echo -e  "${RED}==>${NC} Exiting script. \n"
+   exit -1
+fi
+#-------------------------------------------------------
 
 # Calculating final forecast dates in model namelist format: DD_HH:MM:SS 
 # using: start_date(yyyymmdd) + FCST(hh) :
@@ -139,7 +158,7 @@ then
 fi
 
 
-files_needed=("${SCRIPTS}/namelists/stream_list.atmosphere.output" ""${SCRIPTS}/namelists/stream_list.atmosphere.diagnostics${VARTABLE} "${SCRIPTS}/namelists/stream_list.atmosphere.surface" "${EXECS}/atmosphere_model" "${DATAIN}/fixed/x1.${RES}.static.nc" "${DATAIN}/fixed/x1.${RES}.graph.info.part.${cores}" "${DATAOUT}/${YYYYMMDDHHi}/Pre/x1.${RES}.init.nc" "${DATAIN}/fixed/Vtable.GFS")
+files_needed=("${SCRIPTS}/namelists/stream_list.atmosphere.output" ""${SCRIPTS}/namelists/stream_list.atmosphere.diagnostics${VARTABLE} "${SCRIPTS}/namelists/stream_list.atmosphere.surface" "${EXECS}/atmosphere_model" "${DATAIN}/fixed/x1.${RES}.static.nc" "${DATAIN}/fixed/x1.${RES}.graph.info.part.${cores}" "${DATAOUT}/${YYYYMMDDHHi}/Pre/x1.${RES}.init.nc" "${DATAIN}/fixed/Vtable.${EXP}")
 for file in "${files_needed[@]}"
 do
   if [ ! -s "${file}" ]
@@ -157,16 +176,18 @@ cp -f ${DATAIN}/fixed/*DATA ${DIRRUN}
 cp -f ${DATAIN}/fixed/x1.${RES}.static.nc ${DIRRUN}
 cp -f ${DATAIN}/fixed/x1.${RES}.graph.info.part.${cores} ${DIRRUN}
 cp -f ${DATAOUT}/${YYYYMMDDHHi}/Pre/x1.${RES}.init.nc ${DIRRUN}
-cp -f ${DATAIN}/fixed/Vtable.GFS ${DIRRUN}
+cp -f ${DATAIN}/fixed/Vtable.${EXP} ${DIRRUN}
 
-
-if [ ${EXP} = "GFS" ]
+if [[ $MODERUN == "R" ]]; then
+   cp -f ${DATAOUT}/${YYYYMMDDHHi}/Pre/lbc*.nc ${DIRRUN}
+fi
+if [[ ${EXP} == "GFS" ||  ${EXP} == "ERA5" ]]
 then
    sed -e "s,#LABELI#,${start_date},g;s,#FCSTS#,${DD_HHMMSS_forecast},g;s,#RES#,${RES},g;
-s,#CONFIG_DT#,${CONFIG_DT},g;s,#CONFIG_LEN_DISP#,${CONFIG_LEN_DISP},g;s,#CONFIG_CONV_INTERVAL#,${CONFIG_CONV_INTERVAL},g" \
+s,#CONFIG_DT#,${CONFIG_DT},g;s,#CONFIG_LEN_DISP#,${CONFIG_LEN_DISP},g;s,#CONFIG_CONV_INTERVAL#,${CONFIG_CONV_INTERVAL},g;s,#APPLY_LBCS#,${APPLY_LBCS},g" \
    ${SCRIPTS}/namelists/namelist.atmosphere.TEMPLATE > ${DIRRUN}/namelist.atmosphere
    
-   sed -e "s,#RES#,${RES},g;s,#CIORIG#,${EXP},g;s,#LABELI#,${YYYYMMDDHHi},g;s,#NLEV#,${NLEV},g" \
+   sed -e "s,#RES#,${RES},g;s,#LBCINT#,${LBCINT},g;s,#CIORIG#,${EXP},g;s,#LABELI#,${YYYYMMDDHHi},g;s,#NLEV#,${NLEV},g" \
    ${SCRIPTS}/namelists/streams.atmosphere.TEMPLATE > ${DIRRUN}/streams.atmosphere
 fi
 cp -f ${SCRIPTS}/namelists/stream_list.atmosphere.output ${DIRRUN}

@@ -27,7 +27,6 @@ export STATIC_nthreads=1
 export STATIC_jobname="Pre.static"
 export STATIC_walltime="02:00:00"
 
-
 # PRE-Degrib phase:
 export DEGRIB_QUEUE="pesqextra"
 export DEGRIB_ncores=1
@@ -37,7 +36,6 @@ export DEGRIB_ncpn=1
 export DEGRIB_nthreads=1
 export DEGRIB_jobname="Pre.degrib"
 export DEGRIB_walltime="02:00:00"
-
 
 # PRE-Init Atmosphere phase:
 export INITATMOS_QUEUE="pesqextra"
@@ -49,6 +47,11 @@ export INITATMOS_nthreads=1
 export INITATMOS_jobname="Pre.InitAtmos"
 export INITATMOS_walltime="02:00:00"
 
+# PRE-LBCs phase:
+export LBCS_QUEUE="pesqextra"
+export LBCS_ncores=64
+export LBCS_nnodes=1
+export LBCS_jobname="Pre.LBCS"
 
 # Model phase:
 export MODEL_QUEUE="pesqextra"

@@ -15,7 +15,7 @@ then
    echo "LABELI      :: Initial date YYYYMMDDHH, e.g.: 2024010100"
    echo "FCST        :: Forecast hours, e.g.: 24 or 36, etc."
    echo ""
-   echo "24 hour forcast example:"
+   echo "24 hour forecast example:"
    echo "${0} GFS 1024002 2024010100 24"
    echo "${0} GFS   40962 2024010100 48"
    echo ""
@@ -55,6 +55,10 @@ FCST=${4};        #FCST=24
 
 # Local variables--------------------------------------
 start_date=${YYYYMMDDHHi:0:4}-${YYYYMMDDHHi:4:2}-${YYYYMMDDHHi:6:2}_${YYYYMMDDHHi:8:2}:00:00
+yyyymmddi=${YYYYMMDDHHi:0:8}
+hhi=${YYYYMMDDHHi:8:2}
+yyyymmddhhf=$(date +"%Y%m%d%H" -d "${yyyymmddi} ${hhi}:00 ${FCST} hours" )
+final_date=${yyyymmddhhf:0:4}-${yyyymmddhhf:4:2}-${yyyymmddhhf:6:2}_${yyyymmddhhf:8:2}:00:00
 export DIRRUN=${DIRHOMED}/run.${YYYYMMDDHHi}; rm -fr ${DIRRUN}; mkdir -p ${DIRRUN}
 #-------------------------------------------------------
 mkdir -p ${DATAIN}/${YYYYMMDDHHi}
@@ -110,31 +114,40 @@ cp -f ${DATAIN}/fixed/x1.${RES}.static.nc ${DIRRUN}
 cp -f ${DATAIN}/fixed/Vtable.${EXP} ${DIRRUN}/Vtable
 cp -f ${EXECS}/ungrib.exe ${DIRRUN}
 cp -f ${SCRIPTS}/namelists/namelist.wps.TEMPLATE ${DIRRUN}/namelist.wps.TEMPLATE
-cp -f ${BNDDIR}/gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f000.${YYYYMMDDHHi}.grib2 ${DATAIN}/${YYYYMMDDHHi}
-cp -f ${DATAIN}/${YYYYMMDDHHi}/gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f000.${YYYYMMDDHHi}.grib2 ${DIRRUN}
+#cp -f ${BNDDIR}/gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f000.${YYYYMMDDHHi}.grib2 ${DATAIN}/${YYYYMMDDHHi}
+#cp -f ${DATAIN}/${YYYYMMDDHHi}/gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f000.${YYYYMMDDHHi}.grib2 ${DIRRUN}
 cp -f ${SCRIPTS}/setenv.bash ${DIRRUN}
 cp -f ${SCRIPTS}/link_grib.csh ${DIRRUN}
 rm -f ${DIRRUN}/degrib.bash 
 
+if [[ $MODERUN == "R" ]]; then
+   echo "MODERUN=R. Degribbing GFS data for both initial and lateral boundary conditions..."
+   dt=$((LBCINT / 3600))
+   hours=($(generate_hours_list "00" "$dt" "$FCST"))
+   for hour in "${hours[@]}"; do
+      echo "Temporarily copying GFS data: gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f0${hour}.${YYYYMMDDHHi}.grib2"
+      fhour=$(printf "%03d" ${hour})
+      cp -f ${BNDDIR}/gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f${fhour}.${YYYYMMDDHHi}.grib2 ${DATAIN}/${YYYYMMDDHHi}
+   done
 
-if [ ${SCHEDULER_SYSTEM} != "GENERIC" ]
-then
-   sed -e "s,#JOBNAME#,${DEGRIB_jobname},g;
-   s,#NNODES#,${DEGRIB_nnodes},g;
-   s,#NCPUS#,${DEGRIB_ncpus},g;
-   s,#NTASKS#,${DEGRIB_ncores},g;
-   s,#NTASKSPNODE#,${DEGRIB_ncpn},g;
-   s,#NTHREADS#,${DEGRIB_nthreads},g;
-   s,#PARTITION#,${DEGRIB_QUEUE},g;
-   s,#WALLTIME#,${DEGRIB_walltime},g;
-   s,#OUTPUTJOB#,${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.o,g;
-   s,#ERRORJOB#,${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.e,g" \
-   ${SCRIPTS}/stools/submit_${SYSTEM_KEY}.bash_TEMPLATE > ${DIRRUN}/degrib.bash 
-else
-   echo "#!/bin/bash " > ${DIRRUN}/degrib.bash 
-fi
+   if [ ${SCHEDULER_SYSTEM} != "GENERIC" ]
+   then
+      sed -e "s,#JOBNAME#,${DEGRIB_jobname},g;
+      s,#NNODES#,${DEGRIB_nnodes},g;
+      s,#NCPUS#,${DEGRIB_ncpus},g;
+      s,#NTASKS#,${DEGRIB_ncores},g;
+      s,#NTASKSPNODE#,${DEGRIB_ncpn},g;
+      s,#NTHREADS#,${DEGRIB_nthreads},g;
+      s,#PARTITION#,${DEGRIB_QUEUE},g;
+      s,#WALLTIME#,${DEGRIB_walltime},g;
+      s,#OUTPUTJOB#,${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.o,g;
+      s,#ERRORJOB#,${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.e,g" \
+      ${SCRIPTS}/stools/submit_${SYSTEM_KEY}.bash_TEMPLATE > ${DIRRUN}/degrib.bash 
+   else
+      echo "#!/bin/bash " > ${DIRRUN}/degrib.bash 
+   fi
 
-cat << EOF0 >> ${DIRRUN}/degrib.bash 
+   cat << EOF0 >> ${DIRRUN}/degrib.bash 
 
 ulimit -s unlimited
 ulimit -c unlimited
@@ -154,12 +167,11 @@ ldd ungrib.exe
 
 rm -f GRIBFILE.* namelist.wps
 
-
-sed -e "s,#LABELI#,${start_date},g;s,#PREFIX#,GFS,g" \
+sed -e "s,#LABELI#,${start_date},g;s,#LABELF#,${final_date},g;s,#PREFIX#,GFS,g;s,#LBCINT#,${LBCINT},g;" \
 	${DIRRUN}/namelist.wps.TEMPLATE > ${DIRRUN}/namelist.wps
 
 echo ""
-./link_grib.csh ${DATAIN}/${YYYYMMDDHHi}/gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f000.${YYYYMMDDHHi}.grib2
+./link_grib.csh ${DATAIN}/${YYYYMMDDHHi}/gfs.*.grib2
 
 chmod 755 *
 echo ""
@@ -168,9 +180,7 @@ echo "submetendo jobs ungrib"
 
 time mpirun -np 1 ./ungrib.exe
 
-
 date
-
 
 grep "Successful completion of program ungrib.exe" ${DIRRUN}/ungrib.log >& /dev/null
 
@@ -193,10 +203,90 @@ fi
 
 echo "End of degrib Job"
 
-
 EOF0
-chmod a+x ${DIRRUN}/degrib.bash
 
+elif [[ $MODERUN == "G" ]]; then
+   echo "MODERUN=G. Degribbing GFS data only for initial conditions..."
+   cp -f ${BNDDIR}/gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f000.${YYYYMMDDHHi}.grib2 ${DATAIN}/${YYYYMMDDHHi}
+   
+   if [ ${SCHEDULER_SYSTEM} != "GENERIC" ]
+   then
+      sed -e "s,#JOBNAME#,${DEGRIB_jobname},g;
+      s,#NNODES#,${DEGRIB_nnodes},g;
+      s,#NCPUS#,${DEGRIB_ncpus},g;
+      s,#NTASKS#,${DEGRIB_ncores},g;
+      s,#NTASKSPNODE#,${DEGRIB_ncpn},g;
+      s,#NTHREADS#,${DEGRIB_nthreads},g;
+      s,#PARTITION#,${DEGRIB_QUEUE},g;
+      s,#WALLTIME#,${DEGRIB_walltime},g;
+      s,#OUTPUTJOB#,${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.o,g;
+      s,#ERRORJOB#,${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.e,g" \
+      ${SCRIPTS}/stools/submit_${SYSTEM_KEY}.bash_TEMPLATE > ${DIRRUN}/degrib.bash 
+   else
+      echo "#!/bin/bash " > ${DIRRUN}/degrib.bash 
+   fi
+  
+   cat << EOF0 > ${DIRRUN}/degrib.bash
+
+ulimit -s unlimited
+ulimit -c unlimited
+ulimit -v unlimited
+	
+export PMIX_MCA_gds=hash
+	
+export LD_LIBRARY_PATH=\$LD_LIBRARY_PATH:${HOME}/local/lib64
+	
+cd ${DIRRUN}
+
+. ${SCRIPTS}/setenv.bash
+
+echo "-- PBS_JOBID: \$PBS_JOBID"
+	
+ldd ungrib.exe
+	
+rm -f GRIBFILE.* namelist.wps
+	
+sed -e "s,#LABELI#,${start_date},g;s,#LABELF#,${start_date},g;s,#LBCINT#,${LBCINT},g;s,#PREFIX#,GFS,g" \
+	
+${DIRRUN}/namelist.wps.TEMPLATE > ${DIRRUN}/namelist.wps
+	
+./link_grib.csh ${DATAIN}/${YYYYMMDDHHi}/gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f000.${YYYYMMDDHHi}.grib2
+	
+chmod 755 *
+echo ""
+date
+echo "submetendo jobs ungrib"
+	
+time mpirun -np 1 ./ungrib.exe
+
+date
+
+grep "Successful completion of program ungrib.exe" ${DIRRUN}/ungrib.log >& /dev/null
+if [ \$? -ne 0 ]; then
+   echo "  BUMMER: Ungrib generation failed for some yet unknown reason."
+   echo " "
+   tail -10 ${DIRRUN}/ungrib.log
+   echo " "
+   exit 21
+fi
+#
+# clean up and remove links
+#
+   mv ungrib.log ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/ungrib.${start_date}.log
+   mv namelist.wps ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/namelist.${start_date}.wps
+   mv GFS\:${start_date:0:13} ${DATAOUT}/${YYYYMMDDHHi}/Pre
+   rm -fr ${DATAIN}/${YYYYMMDDHHi}
+echo "End of degrib Job"
+EOF0
+
+else
+   echo -e  "\n${RED}==>${NC} ***** ATTENTION *****\n"
+   echo -e  "${RED}==>${NC} LBCs phase fails during degrib! Please select MODERUN=R or G so that degrib can be done appropriately.\n"
+   echo -e  "${RED}==>${NC} Exiting script. \n"
+   exit -1
+fi
+  
+chmod a+x ${DIRRUN}/degrib.bash
 
 case "${SCHEDULER_SYSTEM}" in
    SLURM)

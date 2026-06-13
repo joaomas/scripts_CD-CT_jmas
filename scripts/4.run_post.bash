@@ -88,21 +88,7 @@ IFS=":" read -r h m s <<< "${t_strout}"
 printf -v t_strout "%02d:%02d:%02d" "$h" "$m" "$s"
 
 # Calculating default parameters for different resolutions
-if [ $RES -eq 1024002 ]; then  #24Km
-   NLAT=721  #180/0.25
-   NLON=1441 #360/0.25
-   STARTLAT=-90.0
-   STARTLON=0.0
-   ENDLAT=90.0
-   ENDLON=360.0
-elif [ $RES -eq 2621442 ]; then  #15Km
-   NLAT=1201 #180/0.15
-   NLON=2401 #360/0.15
-   STARTLAT=-90.0
-   STARTLON=0.0
-   ENDLAT=90.0
-   ENDLON=360.0
-elif [ $RES -eq 40962 ]; then  #120Km
+if [ $RES -eq 40962 ]; then  #120Km
    NLAT=150 #180/1.2
    NLON=300 #360/1.2
    STARTLAT=-90.0
@@ -123,9 +109,30 @@ elif [ $RES -eq 655362 ]; then  #30Km
    STARTLON=0.0
    ENDLAT=90.0
    ENDLON=360.0
+elif [ $RES -eq 1024002 ]; then  #24Km
+   NLAT=721  #180/0.25
+   NLON=1441 #360/0.25
+   STARTLAT=-90.0
+   STARTLON=0.0
+   ENDLAT=90.0
+   ENDLON=360.0
+elif [ $RES -eq 2621442 ]; then  #15Km
+   NLAT=1201 #180/0.15
+   NLON=2401 #360/0.15
+   STARTLAT=-90.0
+   STARTLON=0.0
+   ENDLAT=90.0
+   ENDLON=360.0
 elif [ $RES -eq 5898242 ]; then  #10Km
    NLAT=1801 #180/0.10 (+1)
    NLON=3601 #360/0.10 (+1)
+   STARTLAT=-90.0
+   STARTLON=0.0
+   ENDLAT=90.0
+   ENDLON=360.0
+elif [ $RES -eq 23592962 ]; then  #5Km
+   NLAT=3601 #180/0.05
+   NLON=7201 #360/0.05
    STARTLAT=-90.0
    STARTLON=0.0
    ENDLAT=90.0
