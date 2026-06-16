@@ -98,6 +98,9 @@ elif [ $RES -eq 163842 ]; then   #60Km
 elif [ $RES -eq 655362 ]; then   #30Km
    CONFIG_DT=150.0
    CONFIG_CONV_INTERVAL="00:15:00"
+elif [[ "$RES" == "655362.REG.AMS_CAR" ]]; then #30 km (AMS + Caribe)
+   CONFIG_DT=150.0
+   CONFIG_CONV_INTERVAL="00:15:00"
 elif [ $RES -eq 1024002 ]; then  #24Km
    CONFIG_DT=150.0
    CONFIG_CONV_INTERVAL="00:15:00"
@@ -107,7 +110,13 @@ elif [ $RES -eq 2621442 ]; then  #15Km
 elif [ $RES -eq 5898242 ]; then  #10Km
    CONFIG_DT=60.0
    CONFIG_CONV_INTERVAL="00:15:00"
+elif [[ "$RES" == "5898242.REG.AMS_CAR" ]]; then #10 km (AMS + Caribe)
+   CONFIG_DT=60.0
+   CONFIG_CONV_INTERVAL="00:15:00"
 elif [ $RES -eq 23592962 ]; then  #5km
+   CONFIG_DT=30.0
+   CONFIG_CONV_INTERVAL="00:15:00"
+elif [[ "$RES" == "23592962.REG.AMS_CAR" ]]; then #5 km (AMS + Caribe)
    CONFIG_DT=30.0
    CONFIG_CONV_INTERVAL="00:15:00"
 elif [ $RES -eq 65536002 ]; then  #3Km

@@ -52,36 +52,30 @@ hhi=${YYYYMMDDHHi:8:2}
 yyyymmddhhf=$(date +"%Y%m%d%H" -d "${yyyymmddi} ${hhi}:00 ${FCST} hours" )
 final_date=${yyyymmddhhf:0:4}-${yyyymmddhhf:4:2}-${yyyymmddhhf:6:2}_${yyyymmddhhf:8:2}:00:00
 GEODATA=${DATAIN}/WPS_GEOG
-cores=${INITATMOS_ncores}
+cores=${LBCS_ncores}
 export DIRRUN=${DIRHOMED}/run.${YYYYMMDDHHi}; rm -fr ${DIRRUN}; mkdir -p ${DIRRUN}
 #-------------------------------------------------------
 mkdir -p ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs
 
-if [ ! -s ${DATAIN}/fixed/${RES}.graph.info.part.${cores} ]
+if [ ! -s ${DATAIN}/fixed/x1.${RES}.graph.info.part.${cores} ]
 then
-   if [[ ${RES} == x1.* ]]
+   if [ ! -s ${DATAIN}/fixed/x1.${RES}.graph.info ]
    then
-      if [ ! -s ${DATAIN}/fixed/${RES}.graph.info ]
-      then
-         cd ${DATAIN}/fixed
-         echo -e "${GREEN}==>${NC} downloading meshes tgz files ... \n"
-         wget https://www2.mmm.ucar.edu/projects/mpas/atmosphere_meshes/${RES}.tar.gz
-         wget https://www2.mmm.ucar.edu/projects/mpas/atmosphere_meshes/${RES}_static.tar.gz
-         tar -xzvf ${RES}.tar.gz
-         tar -xzvf ${RES}_static.tar.gz
-      fi
-      echo -e "${GREEN}==>${NC} Creating ${RES}.graph.info.part.${cores} ... \n"
       cd ${DATAIN}/fixed
-      gpmetis -minconn -contig -niter=200 ${RES}.graph.info ${cores}
-      rm -fr ${RES}.tar.gz ${RES}_static.tar.gz
-   else
-      echo -e "${GREEN}==>${NC} Creating ${RES}.graph.info.part.${cores} ... \n"
+      echo -e "${GREEN}==>${NC} downloading meshes tgz files ... \n"
       cd ${DATAIN}/fixed
-      gpmetis -minconn -contig -niter=200 ${RES}.graph.info ${cores}
+      wget https://www2.mmm.ucar.edu/projects/mpas/atmosphere_meshes/x1.${RES}.tar.gz
+      wget https://www2.mmm.ucar.edu/projects/mpas/atmosphere_meshes/x1.${RES}_static.tar.gz
+      tar -xzvf x1.${RES}.tar.gz
+      tar -xzvf x1.${RES}_static.tar.gz
    fi
+   echo -e "${GREEN}==>${NC} Creating x1.${RES}.graph.info.part.${cores} ... \n"
+   cd ${DATAIN}/fixed
+   gpmetis -minconn -contig -niter=200 x1.${RES}.graph.info ${cores}
+   rm -fr x1.${RES}.tar.gz x1.${RES}_static.tar.gz
 fi
 
-files_needed=("${SCRIPTS}/namelists/namelist.init_atmosphere.LBCS" "${SCRIPTS}/namelists/streams.init_atmosphere.LBCS" "${DATAIN}/fixed/${RES}.graph.info.part.${cores}" "${DATAOUT}/${YYYYMMDDHHi}/Pre/${RES}.init.nc" "${EXECS}/init_atmosphere_model")
+files_needed=("${SCRIPTS}/namelists/namelist.init_atmosphere.LBCS" "${SCRIPTS}/namelists/streams.init_atmosphere.LBCS" "${DATAIN}/fixed/x1.${RES}.graph.info.part.${cores}" "${DATAOUT}/${YYYYMMDDHHi}/Pre/x1.${RES}.init.nc" "${EXECS}/init_atmosphere_model")
 for file in "${files_needed[@]}"
 do
   if [ ! -s "${file}" ]
@@ -100,8 +94,8 @@ sed -e "s,#RES#,${RES},g;s,#LBCINT#,${LBCINT},g" \
     ${SCRIPTS}/namelists/streams.init_atmosphere.LBCS > ${DIRRUN}/streams.init_atmosphere
 
 
-cp -f ${DATAIN}/fixed/${RES}.graph.info.part.${cores} ${DIRRUN}
-cp -f ${DATAOUT}/${YYYYMMDDHHi}/Pre/${RES}.init.nc ${DIRRUN}
+cp -f ${DATAIN}/fixed/x1.${RES}.graph.info.part.${cores} ${DIRRUN}
+cp -f ${DATAOUT}/${YYYYMMDDHHi}/Pre/x1.${RES}.init.nc ${DIRRUN}
 cp -f ${DATAOUT}/${YYYYMMDDHHi}/Pre/${EXP}\:* ${DIRRUN}
 cp -f ${EXECS}/init_atmosphere_model ${DIRRUN}
 
@@ -111,7 +105,7 @@ rm -f ${DIRRUN}/lbcs.bash
 
 if [ ${SCHEDULER_SYSTEM} != "GENERIC" ]
 then
-   sed -e "s,#JOBNAME#,${DEGRIB_jobname},g;
+   sed -e "s,#JOBNAME#,${LBCS_jobname},g;
    s,#NNODES#,${LBCS_nnodes},g;
    s,#NCPUS#,${LBCS_ncpus},g;
    s,#NTASKS#,${LBCS_ncores},g;
@@ -119,14 +113,14 @@ then
    s,#NTHREADS#,${LBCS_nthreads},g;
    s,#PARTITION#,${LBCS_QUEUE},g;
    s,#WALLTIME#,${LBCS_walltime},g;
-   s,#OUTPUTJOB#,${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.o,g;
-   s,#ERRORJOB#,${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.e,g" \
+   s,#OUTPUTJOB#,${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/lbcs.o,g;
+   s,#ERRORJOB#,${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/lbcs.e,g" \
    ${SCRIPTS}/stools/submit_${SYSTEM_KEY}.bash_TEMPLATE > ${DIRRUN}/lbcs.bash 
 else
    echo "#!/bin/bash " > ${DIRRUN}/lbcs.bash 
 fi
 
-cat << EOF0 > ${DIRRUN}/lbcs.bash 
+cat << EOF0 >> ${DIRRUN}/lbcs.bash 
 
 export executable=init_atmosphere_model
 
@@ -134,20 +128,24 @@ ulimit -c unlimited
 ulimit -v unlimited
 ulimit -s unlimited
 
-
-. $(pwd)/setenv.bash
+. ${SCRIPTS}/setenv.bash
 
 cd ${DIRRUN}
 
+if [ "$HOSTNAME" = "egeon" ]; then
+   echo "-- SLURM_JOB_ID: \$SLURM_JOB_ID"
+   time mpirun -np ${LBCS_ncores} ./\${executable}
+else
+   echo "-- PBS_JOBID: \$PBS_JOBID"
+   time mpirun --ppn ${LBCS_ncpn} -np ${LBCS_ncores} --depth=${LBCS_nthreads} --cpu-bind depth ./\${executable}
+fi
 
-date
-time mpirun -np \${SLURM_NTASKS} ./\${executable}
 date
 
 mv ${DIRRUN}/log.init_atmosphere.0000.out ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/log.init_atmosphere.0000.${RES}.lbcs.nc.${YYYYMMDDHHi}.out
 mv ${DIRRUN}/namelist.init_atmosphere ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/namelist.init_atmosphere.lbcs
 mv ${DIRRUN}/streams.init_atmosphere ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/streams.init_atmosphere.lbcs
-mv ${DIRRUN}/${RES}.init.nc ${DATAOUT}/${YYYYMMDDHHi}/Pre
+mv ${DIRRUN}/x1.${RES}.init.nc ${DATAOUT}/${YYYYMMDDHHi}/Pre
 mv ${DIRRUN}/lbc*.nc ${DATAOUT}/${YYYYMMDDHHi}/Pre
 
 EOF0
@@ -185,4 +183,9 @@ then
 fi
 chmod 775 ${DATAOUT}/${YYYYMMDDHHi}/Pre/*
 
+JOBID=$(sed -n '4p' ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/lbcs.o | awk '{print $3}' | sed "s/.pbs-ha//g")
+mv ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/lbcs.o ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/lbcs.o.${JOBID}
+mv ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/lbcs.e ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/lbcs.e.${JOBID}
+chmod a+r ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/lbcs.o.${JOBID}
+chmod a+r ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/lbcs.e.${JOBID}
 rm -fr ${DIRRUN}

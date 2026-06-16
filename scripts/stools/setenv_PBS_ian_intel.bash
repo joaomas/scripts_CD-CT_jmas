@@ -51,12 +51,16 @@ export INITATMOS_walltime="02:00:00"
 export LBCS_QUEUE="pesqextra"
 export LBCS_ncores=64
 export LBCS_nnodes=1
+export LBCS_ncpus=64
+export LBCS_ncpn=64
+export LBCS_nthreads=1
 export LBCS_jobname="Pre.LBCS"
+export LBCS_walltime="02:00:00"
 
 # Model phase:
 export MODEL_QUEUE="pesqextra"
-export MODEL_ncores=2048
-export MODEL_nnodes=8
+export MODEL_ncores=4096
+export MODEL_nnodes=16
 export MODEL_ncpus=256
 export MODEL_ncpn=256
 export MODEL_nthreads=1

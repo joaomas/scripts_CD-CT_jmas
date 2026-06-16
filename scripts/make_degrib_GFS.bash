@@ -51,8 +51,6 @@ FCST=${4};        #FCST=24
 #-------------------------------------------------------
 
 
-
-
 # Local variables--------------------------------------
 start_date=${YYYYMMDDHHi:0:4}-${YYYYMMDDHHi:4:2}-${YYYYMMDDHHi:6:2}_${YYYYMMDDHHi:8:2}:00:00
 yyyymmddi=${YYYYMMDDHHi:0:8}
@@ -123,11 +121,11 @@ rm -f ${DIRRUN}/degrib.bash
 if [[ $MODERUN == "R" ]]; then
    echo "MODERUN=R. Degribbing GFS data for both initial and lateral boundary conditions..."
    dt=$((LBCINT / 3600))
-   hours=($(generate_hours_list "00" "$dt" "$FCST"))
-   for hour in "${hours[@]}"; do
-      echo "Temporarily copying GFS data: gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f0${hour}.${YYYYMMDDHHi}.grib2"
-      fhour=$(printf "%03d" ${hour})
-      cp -f ${BNDDIR}/gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f${fhour}.${YYYYMMDDHHi}.grib2 ${DATAIN}/${YYYYMMDDHHi}
+
+   for ((hour=0; hour<=FCST; hour+=dt)); do
+      hour_fmt=$(printf "%03d" "$hour")
+      echo "Temporarily copying GFS data: gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f${hour_fmt}.${YYYYMMDDHHi}.grib2"
+      cp -f ${BNDDIR}/gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f${hour_fmt}.${YYYYMMDDHHi}.grib2 ${DATAIN}/${YYYYMMDDHHi}
    done
 
    if [ ${SCHEDULER_SYSTEM} != "GENERIC" ]
@@ -167,8 +165,8 @@ ldd ungrib.exe
 
 rm -f GRIBFILE.* namelist.wps
 
-sed -e "s,#LABELI#,${start_date},g;s,#LABELF#,${final_date},g;s,#PREFIX#,GFS,g;s,#LBCINT#,${LBCINT},g;" \
-	${DIRRUN}/namelist.wps.TEMPLATE > ${DIRRUN}/namelist.wps
+sed -e "s,#LABELI#,${start_date},g;s,#LABELF#,${final_date},g;s,#LBCINT#,${LBCINT},g;s,#PREFIX#,GFS,g" \
+       ${DIRRUN}/namelist.wps.TEMPLATE > ${DIRRUN}/namelist.wps
 
 echo ""
 ./link_grib.csh ${DATAIN}/${YYYYMMDDHHi}/gfs.*.grib2
@@ -197,8 +195,7 @@ fi
 #
    mv ungrib.log ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/ungrib.${start_date}.log
    mv namelist.wps ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/namelist.${start_date}.wps
-   mv GFS\:${start_date:0:13} ${DATAOUT}/${YYYYMMDDHHi}/Pre
-
+   mv GFS* ${DATAOUT}/${YYYYMMDDHHi}/Pre
    rm -fr ${DATAIN}/${YYYYMMDDHHi}
 
 echo "End of degrib Job"
@@ -226,7 +223,7 @@ elif [[ $MODERUN == "G" ]]; then
       echo "#!/bin/bash " > ${DIRRUN}/degrib.bash 
    fi
   
-   cat << EOF0 > ${DIRRUN}/degrib.bash
+   cat << EOF0 >> ${DIRRUN}/degrib.bash
 
 ulimit -s unlimited
 ulimit -c unlimited
@@ -247,8 +244,7 @@ ldd ungrib.exe
 rm -f GRIBFILE.* namelist.wps
 	
 sed -e "s,#LABELI#,${start_date},g;s,#LABELF#,${start_date},g;s,#LBCINT#,${LBCINT},g;s,#PREFIX#,GFS,g" \
-	
-${DIRRUN}/namelist.wps.TEMPLATE > ${DIRRUN}/namelist.wps
+       ${DIRRUN}/namelist.wps.TEMPLATE > ${DIRRUN}/namelist.wps
 	
 ./link_grib.csh ${DATAIN}/${YYYYMMDDHHi}/gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f000.${YYYYMMDDHHi}.grib2
 	
@@ -277,6 +273,7 @@ fi
    mv GFS\:${start_date:0:13} ${DATAOUT}/${YYYYMMDDHHi}/Pre
    rm -fr ${DATAIN}/${YYYYMMDDHHi}
 echo "End of degrib Job"
+
 EOF0
 
 else
@@ -327,5 +324,4 @@ mv ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.o ${DATAOUT}/${YYYYMMDDHHi}/Pre/log
 mv ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.e ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.e.${JOBID}
 chmod a+r ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.o.${JOBID}
 chmod a+r ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.e.${JOBID}
-
 rm -fr ${DIRRUN}

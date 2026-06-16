@@ -1,7 +1,7 @@
 <streams>
 <immutable_stream name="input"
                   type="input"
-                  filename_template="#RES#.init.nc"
+                  filename_template="x1.#RES#.init.nc"
                   input_interval="initial_only" />
 
 <immutable_stream name="output"
