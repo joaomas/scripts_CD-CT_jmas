@@ -86,7 +86,7 @@ then
       else
          BNDDIR=${DATAIN}/${EXP}/${YYYYMMDDHHi}
       fi
-    else
+   else
       BNDDIR=${GCCCIS}/${EXP}/${YYYYMMDDHHi:0:4}/${YYYYMMDDHHi}
    fi    
 fi
@@ -309,7 +309,7 @@ do
   fi
 done
 
-mv ${DIRRUN}/degrib_GFS.bash ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs
+mv ${DIRRUN}/degrib_${EXP}.bash ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs
 chmod 755 ${DATAOUT}/${YYYYMMDDHHi}/Pre/*
 
 JOBID=$(sed -n '4p' ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib_${EXP}.o | awk '{print $3}' | sed "s/.pbs-ha//g")
