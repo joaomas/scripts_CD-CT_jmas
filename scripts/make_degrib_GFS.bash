@@ -9,7 +9,7 @@ then
    echo ""
    echo "${0} EXP_NAME RESOLUTION LABELI FCST"
    echo ""
-   echo "EXP_NAME    :: Forcing: GFS"
+   echo "EXP_NAME    :: Forcing: GFS or ERA5"
    echo "            :: Others options to be added later..."
    echo "RESOLUTION  :: number of points in resolution model grid, e.g: 1024002  (24 km)"
    echo "LABELI      :: Initial date YYYYMMDDHH, e.g.: 2024010100"
@@ -29,7 +29,7 @@ echo -e "\033[1;32m==>\033[0m Moduling environment for MONAN model...\n"
 . setenv.bash
 
 echo ""
-echo "---- Make Degrib ----"
+echo "---- Make Degrib ${EXP} ----"
 echo ""
 
 # Standart directories variables:---------------------------------------
@@ -42,14 +42,12 @@ SOURCES=${DIRHOMES}/sources;            mkdir -p ${SOURCES}
 EXECS=${DIRHOMED}/execs;                mkdir -p ${EXECS}
 #----------------------------------------------------------------------
 
-
 # Input variables:--------------------------------------
 EXP=${1};         #EXP=GFS
 RES=${2};         #RES=1024002
 YYYYMMDDHHi=${3}; #YYYYMMDDHHi=2024012000
 FCST=${4};        #FCST=24
 #-------------------------------------------------------
-
 
 # Local variables--------------------------------------
 start_date=${YYYYMMDDHHi:0:4}-${YYYYMMDDHHi:4:2}-${YYYYMMDDHHi:6:2}_${YYYYMMDDHHi:8:2}:00:00
@@ -68,33 +66,30 @@ if [ "$HOSTNAME" = "egeon" ]; then
     cp -f /usr/lib64/libjpeg.so* ${HOME}/local/lib64
 fi
 
-#Se nao existir CI no diretorio do IO, 
-# busca no nosso dir /beegfs/monan/CIs, se nao existir tbm, aborta!
-#CR: BNDDIR should be setted just for EGEON machine
-#CR: some local variables were mobed into the SLURM section, particularly for egeon
-
 OPERDIREXP=${OPERDIR}/${EXP}
 BNDDIR=${OPERDIREXP}/0p25/brutos/${YYYYMMDDHHi:0:4}/${YYYYMMDDHHi:4:2}/${YYYYMMDDHHi:6:2}/${YYYYMMDDHHi:8:2}
 
-
-# Se nao existir CI no diretorio do IO, 
-# busca no nosso dir /beegfs/monan/CIs (Egeon) , /p/monan/CIs (xd2000) se nao existir tbm, aborta!
+# Se nao existir CI no diretorio do IO, busca no GCC MONAN dir /beegfs/monan/CIs (Egeon), /p/projetos/monan_adm/monan/CIs 
+# Se nao existir tambem no GCC MONAN, busca em datain/EXP, se não aborta!
 #CR: maybe this if should belong to the SLURM kind of running...
 if [ ! -s ${BNDDIR}/gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f000.${YYYYMMDDHHi}.grib2 ]
 then
    if [ ! -s ${GCCCIS}/${EXP}/${YYYYMMDDHHi:0:4}/${YYYYMMDDHHi}/gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f000.${YYYYMMDDHHi}.grib2 ]
    then
-      echo -e "${RED}==>${NC}Condicao de contorno inexistente !"
-      echo -e "${RED}==>${NC}Check ${BNDDIR} or." 
-      echo -e "${RED}==>${NC}Check ${GCCCIS}/${EXP}"
-      exit 1            
-   else
+      if [ -s ${DATAIN}/${EXP}/${YYYYMMDDHHi}/gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f000.${YYYYMMDDHHi}.grib2 ]
+      then
+         echo -e "${RED}==>${NC}Condicao de contorno inexistente! - ${EXP}"
+         echo -e "${RED}==>${NC}Check ${BNDDIR} or" 
+         echo -e "${RED}==>${NC}Check ${GCCCIS}/${EXP} or"
+	 echo -e "${RED}==>${NC}Check ${DATAIN}/${EXP}."
+         exit 1
+      else
+         BNDDIR=${DATAIN}/${EXP}/${YYYYMMDDHHi}
+      fi
+    else
       BNDDIR=${GCCCIS}/${EXP}/${YYYYMMDDHHi:0:4}/${YYYYMMDDHHi}
    fi    
 fi
-
-
-#files_needed=("${DATAIN}/fixed/x1.${RES}.static.nc" "${DATAIN}/fixed/Vtable.${EXP}" "${EXECS}/ungrib.exe" "${DATAIN}/${YYYYMMDDHHi}/gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f000.${YYYYMMDDHHi}.grib2")
 
 files_needed=("${DATAIN}/fixed/x1.${RES}.static.nc" "${DATAIN}/fixed/Vtable.${EXP}" "${EXECS}/ungrib.exe" "${BNDDIR}/gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f000.${YYYYMMDDHHi}.grib2")
 
@@ -112,11 +107,9 @@ cp -f ${DATAIN}/fixed/x1.${RES}.static.nc ${DIRRUN}
 cp -f ${DATAIN}/fixed/Vtable.${EXP} ${DIRRUN}/Vtable
 cp -f ${EXECS}/ungrib.exe ${DIRRUN}
 cp -f ${SCRIPTS}/namelists/namelist.wps.TEMPLATE ${DIRRUN}/namelist.wps.TEMPLATE
-#cp -f ${BNDDIR}/gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f000.${YYYYMMDDHHi}.grib2 ${DATAIN}/${YYYYMMDDHHi}
-#cp -f ${DATAIN}/${YYYYMMDDHHi}/gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f000.${YYYYMMDDHHi}.grib2 ${DIRRUN}
 cp -f ${SCRIPTS}/setenv.bash ${DIRRUN}
 cp -f ${SCRIPTS}/link_grib.csh ${DIRRUN}
-rm -f ${DIRRUN}/degrib.bash 
+rm -f ${DIRRUN}/degrib_${EXP}.bash
 
 if [[ $MODERUN == "R" ]]; then
    echo "MODERUN=R. Degribbing GFS data for both initial and lateral boundary conditions..."
@@ -138,14 +131,14 @@ if [[ $MODERUN == "R" ]]; then
       s,#NTHREADS#,${DEGRIB_nthreads},g;
       s,#PARTITION#,${DEGRIB_QUEUE},g;
       s,#WALLTIME#,${DEGRIB_walltime},g;
-      s,#OUTPUTJOB#,${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.o,g;
-      s,#ERRORJOB#,${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.e,g" \
-      ${SCRIPTS}/stools/submit_${SYSTEM_KEY}.bash_TEMPLATE > ${DIRRUN}/degrib.bash 
+      s,#OUTPUTJOB#,${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib_${EXP}.o,g;
+      s,#ERRORJOB#,${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib_${EXP}.e,g" \
+      ${SCRIPTS}/stools/submit_${SYSTEM_KEY}.bash_TEMPLATE > ${DIRRUN}/degrib_${EXP}.bash
    else
-      echo "#!/bin/bash " > ${DIRRUN}/degrib.bash 
+      echo "#!/bin/bash " > ${DIRRUN}/degrib_${EXP}.bash
    fi
 
-   cat << EOF0 >> ${DIRRUN}/degrib.bash 
+   cat << EOF0 >> ${DIRRUN}/degrib_${EXP}.bash 
 
 ulimit -s unlimited
 ulimit -c unlimited
@@ -165,7 +158,7 @@ ldd ungrib.exe
 
 rm -f GRIBFILE.* namelist.wps
 
-sed -e "s,#LABELI#,${start_date},g;s,#LABELF#,${final_date},g;s,#LBCINT#,${LBCINT},g;s,#PREFIX#,GFS,g" \
+sed -e "s,#LABELI#,${start_date},g;s,#LABELF#,${final_date},g;s,#LBCINT#,${LBCINT},g;s,#PREFIX#,${EXP},g" \
        ${DIRRUN}/namelist.wps.TEMPLATE > ${DIRRUN}/namelist.wps
 
 echo ""
@@ -216,14 +209,14 @@ elif [[ $MODERUN == "G" ]]; then
       s,#NTHREADS#,${DEGRIB_nthreads},g;
       s,#PARTITION#,${DEGRIB_QUEUE},g;
       s,#WALLTIME#,${DEGRIB_walltime},g;
-      s,#OUTPUTJOB#,${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.o,g;
-      s,#ERRORJOB#,${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.e,g" \
-      ${SCRIPTS}/stools/submit_${SYSTEM_KEY}.bash_TEMPLATE > ${DIRRUN}/degrib.bash 
+      s,#OUTPUTJOB#,${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib_${EXP}.o,g;
+      s,#ERRORJOB#,${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib_${EXP}.e,g" \
+      ${SCRIPTS}/stools/submit_${SYSTEM_KEY}.bash_TEMPLATE > ${DIRRUN}/degrib_${EXP}.bash 
    else
-      echo "#!/bin/bash " > ${DIRRUN}/degrib.bash 
+      echo "#!/bin/bash " > ${DIRRUN}/degrib_${EXP}.bash 
    fi
   
-   cat << EOF0 >> ${DIRRUN}/degrib.bash
+   cat << EOF0 >> ${DIRRUN}/degrib_${EXP}.bash
 
 ulimit -s unlimited
 ulimit -c unlimited
@@ -243,7 +236,7 @@ ldd ungrib.exe
 	
 rm -f GRIBFILE.* namelist.wps
 	
-sed -e "s,#LABELI#,${start_date},g;s,#LABELF#,${start_date},g;s,#LBCINT#,${LBCINT},g;s,#PREFIX#,GFS,g" \
+sed -e "s,#LABELI#,${start_date},g;s,#LABELF#,${start_date},g;s,#LBCINT#,${LBCINT},g;s,#PREFIX#,${EXP},g" \
        ${DIRRUN}/namelist.wps.TEMPLATE > ${DIRRUN}/namelist.wps
 	
 ./link_grib.csh ${DATAIN}/${YYYYMMDDHHi}/gfs.t${YYYYMMDDHHi:8:2}z.pgrb2.0p25.f000.${YYYYMMDDHHi}.grib2
@@ -278,27 +271,27 @@ EOF0
 
 else
    echo -e  "\n${RED}==>${NC} ***** ATTENTION *****\n"
-   echo -e  "${RED}==>${NC} LBCs phase fails during degrib! Please select MODERUN=R or G so that degrib can be done appropriately.\n"
+   echo -e  "${RED}==>${NC} Make degrib phase fails during degrib! Please select MODERUN=R or G so that degrib can be done appropriately.\n"
    echo -e  "${RED}==>${NC} Exiting script. \n"
    exit -1
 fi
   
-chmod a+x ${DIRRUN}/degrib.bash
+chmod a+x ${DIRRUN}/degrib_${EXP}.bash
 
 case "${SCHEDULER_SYSTEM}" in
    SLURM)
-      echo -e  "${GREEN}==>${NC} Sbatch degrib.bash...\n"
+      echo -e  "${GREEN}==>${NC} Sbatch degrib_${EXP}.bash...\n"
       cd ${DIRRUN}
-      sbatch --wait ${DIRRUN}/degrib.bash
+      sbatch --wait ${DIRRUN}/degrib_${EXP}.bash
         ;;
    PBS)
-      echo -e  "${GREEN}==>${NC} qsub degrib.bash...\n"
+      echo -e  "${GREEN}==>${NC} Qsub degrib_${EXP}.bash...\n"
       cd ${DIRRUN}
-      qsub -W block=true ${DIRRUN}/degrib.bash
+      qsub -W block=true ${DIRRUN}/degrib_${EXP}.bash
        ;;
 #    GENERIC)
 #      echo "Nenhum gerenciador detectado"
-#      ${DIRRUN}/degrib.bash
+#      ${DIRRUN}/degrib_${EXP}.bash
 #      ;;
 esac
 
@@ -316,12 +309,12 @@ do
   fi
 done
 
-mv ${DIRRUN}/degrib.bash ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs
+mv ${DIRRUN}/degrib_GFS.bash ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs
 chmod 755 ${DATAOUT}/${YYYYMMDDHHi}/Pre/*
 
-JOBID=$(sed -n '4p' ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.o | awk '{print $3}' | sed "s/.pbs-ha//g")
-mv ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.o ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.o.${JOBID}
-mv ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.e ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.e.${JOBID}
-chmod a+r ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.o.${JOBID}
-chmod a+r ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib.e.${JOBID}
+JOBID=$(sed -n '4p' ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib_${EXP}.o | awk '{print $3}' | sed "s/.pbs-ha//g")
+mv ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib_${EXP}.o ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib_${EXP}.o.${JOBID}
+mv ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib_${EXP}.e ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib_${EXP}.e.${JOBID}
+chmod a+r ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib_${EXP}.o.${JOBID}
+chmod a+r ${DATAOUT}/${YYYYMMDDHHi}/Pre/logs/degrib_${EXP}.e.${JOBID}
 rm -fr ${DIRRUN}

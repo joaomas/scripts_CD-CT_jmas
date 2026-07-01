@@ -89,38 +89,40 @@ printf -v t_strout "%02d:%02d:%02d" "$h" "$m" "$s"
 # From now on, CONFI_LEN_DISP becames cte = 0.0, pickin up this value from static file.
 
 # Calculating default parameters for different resolutions
-if [ $RES -eq 40962 ]; then      #120Km
+# global mesh
+if [[ "$RES" == "40962" ]]; then      #120Km
    CONFIG_DT=600.0
    CONFIG_CONV_INTERVAL="00:15:00"
-elif [ $RES -eq 163842 ]; then   #60Km
+elif [[ "$RES" == "163842" ]]; then   #60Km
    CONFIG_DT=300.0
    CONFIG_CONV_INTERVAL="00:15:00"
-elif [ $RES -eq 655362 ]; then   #30Km
+elif [[ "$RES" == "655362" ]]; then   #30Km
    CONFIG_DT=150.0
    CONFIG_CONV_INTERVAL="00:15:00"
-elif [[ "$RES" == "655362.REG.AMS_CAR" ]]; then #30 km (AMS + Caribe)
+elif [[ "$RES" == "1024002" ]]; then  #24Km
    CONFIG_DT=150.0
    CONFIG_CONV_INTERVAL="00:15:00"
-elif [ $RES -eq 1024002 ]; then  #24Km
-   CONFIG_DT=150.0
-   CONFIG_CONV_INTERVAL="00:15:00"
-elif [ $RES -eq 2621442 ]; then  #15Km
+elif [[ "$RES" == "2621442" ]]; then  #15Km
    CONFIG_DT=90.0
    CONFIG_CONV_INTERVAL="00:15:00"
-elif [ $RES -eq 5898242 ]; then  #10Km
+elif [[ "$RES" == "5898242" ]]; then  #10Km
    CONFIG_DT=60.0
+   CONFIG_CONV_INTERVAL="00:15:00"
+elif [[ "$RES" == "23592962" ]]; then  #5km
+   CONFIG_DT=30.0
+   CONFIG_CONV_INTERVAL="00:15:00"
+elif [[ "$RES" == "65536002" ]]; then  #3Km
+   CONFIG_DT=18.0
+   CONFIG_CONV_INTERVAL="00:15:00"
+# regional mesh
+elif [[ "$RES" == "655362.REG.AMS_CAR" ]]; then #30 km (AMS + Caribe)
+   CONFIG_DT=150.0
    CONFIG_CONV_INTERVAL="00:15:00"
 elif [[ "$RES" == "5898242.REG.AMS_CAR" ]]; then #10 km (AMS + Caribe)
    CONFIG_DT=60.0
    CONFIG_CONV_INTERVAL="00:15:00"
-elif [ $RES -eq 23592962 ]; then  #5km
-   CONFIG_DT=30.0
-   CONFIG_CONV_INTERVAL="00:15:00"
 elif [[ "$RES" == "23592962.REG.AMS_CAR" ]]; then #5 km (AMS + Caribe)
    CONFIG_DT=30.0
-   CONFIG_CONV_INTERVAL="00:15:00"
-elif [ $RES -eq 65536002 ]; then  #3Km
-   CONFIG_DT=18.0
    CONFIG_CONV_INTERVAL="00:15:00"
 else
     echo -e  "\n${RED}==>${NC} ***** ATTENTION *****\n"
@@ -129,11 +131,13 @@ else
 fi
 #-------------------------------------------------------
 
-# Setting configuration to apply or not lateral boundary conditions
+# Setting configuration to apply or not lateral boundary conditions and output filename
 if [[ $MODERUN == "R" ]]; then
    APPLY_LBCS=true
+   RORG=R
 elif [[ $MODERUN == "G" ]]; then
    APPLY_LBCS=false
+   RORG=G
 else
    echo -e  "\n${RED}==>${NC} ***** ATTENTION *****\n"
    echo -e  "${RED}==>${NC} Atmosphere phase fails! Please select MODERUN=R (Regional) or MODERUN=G (Global) in 'setenv.bash' so that MONAN knows whether to read or not lateral boundary conditions.\n"
@@ -156,14 +160,12 @@ then
       cd ${DATAIN}/fixed
       echo -e "${GREEN}==>${NC} downloading meshes tgz files ... \n"
       wget https://www2.mmm.ucar.edu/projects/mpas/atmosphere_meshes/x1.${RES}.tar.gz
-      wget https://www2.mmm.ucar.edu/projects/mpas/atmosphere_meshes/x1.${RES}_static.tar.gz
       tar -xzvf x1.${RES}.tar.gz
-      tar -xzvf x1.${RES}_static.tar.gz
    fi
    echo -e "${GREEN}==>${NC} Creating x1.${RES}.graph.info.part.${cores} ... \n"
    cd ${DATAIN}/fixed
    gpmetis -minconn -contig -niter=200 x1.${RES}.graph.info ${cores}
-   rm -fr x1.${RES}.tar.gz x1.${RES}_static.tar.gz
+   rm -fr x1.${RES}.tar.gz
 fi
 
 
@@ -190,13 +192,13 @@ cp -f ${DATAIN}/fixed/Vtable.${EXP} ${DIRRUN}
 if [[ $MODERUN == "R" ]]; then
    cp -f ${DATAOUT}/${YYYYMMDDHHi}/Pre/lbc*.nc ${DIRRUN}
 fi
-if [[ ${EXP} == "GFS" ||  ${EXP} == "ERA5" ]]
+if [[ ${EXP} == "GFS" ||  ${EXP} == "ERA5" || ${EXP} == "ERA" ]]
 then
    sed -e "s,#LABELI#,${start_date},g;s,#FCSTS#,${DD_HHMMSS_forecast},g;s,#RES#,${RES},g;
 s,#CONFIG_DT#,${CONFIG_DT},g;s,#CONFIG_LEN_DISP#,${CONFIG_LEN_DISP},g;s,#CONFIG_CONV_INTERVAL#,${CONFIG_CONV_INTERVAL},g;s,#APPLY_LBCS#,${APPLY_LBCS},g" \
    ${SCRIPTS}/namelists/namelist.atmosphere.TEMPLATE > ${DIRRUN}/namelist.atmosphere
    
-   sed -e "s,#RES#,${RES},g;s,#LBCINT#,${LBCINT},g;s,#CIORIG#,${EXP},g;s,#LABELI#,${YYYYMMDDHHi},g;s,#NLEV#,${NLEV},g" \
+   sed -e "s,#RES#,${RES},g;s,#RORG#,${RORG},g;s,#LBCINT#,${LBCINT},g;s,#CIORIG#,${EXP},g;s,#LABELI#,${YYYYMMDDHHi},g;s,#NLEV#,${NLEV},g" \
    ${SCRIPTS}/namelists/streams.atmosphere.TEMPLATE > ${DIRRUN}/streams.atmosphere
 fi
 cp -f ${SCRIPTS}/namelists/stream_list.atmosphere.output ${DIRRUN}
@@ -301,7 +303,7 @@ do
    i=$(printf "%04d" ${ii})
    hh=${YYYYMMDDHHi:8:2}
    currentdate=$(date -d "${YYYYMMDDHHi:0:8} ${hh}:00:00 $(echo "(${i}-1)*${t_strout:0:2}" | bc) hours $(echo "(${i}-1)*${t_strout:3:2}" | bc) minutes $(echo "(${i}-1)*${t_strout:6:2}" | bc) seconds" +"%Y%m%d%H.%M.%S")
-   file=MONAN_DIAG_G_MOD_${EXP}_${YYYYMMDDHHi}_${currentdate}.x${RES}L${NLEV}.nc
+   file=MONAN_DIAG_${RORG}_MOD_${EXP}_${YYYYMMDDHHi}_${currentdate}.x${RES}L${NLEV}.nc
 
    if [ ! -s ${DATAOUT}/${YYYYMMDDHHi}/Model/${file} ]
    then

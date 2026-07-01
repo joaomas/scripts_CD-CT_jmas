@@ -59,8 +59,8 @@ export LBCS_walltime="02:00:00"
 
 # Model phase:
 export MODEL_QUEUE="pesqextra"
-export MODEL_ncores=4096
-export MODEL_nnodes=16
+export MODEL_ncores=2048
+export MODEL_nnodes=8
 export MODEL_ncpus=256
 export MODEL_ncpn=256
 export MODEL_nthreads=1
@@ -94,7 +94,6 @@ export GCCCIS=/p/projetos/monan_adm/monan/CIs
 # PIO is not necessary for version 8.* If PIO is empty, MPAS Will use SMIOL
 export PIO=
 export LD_LIBRARY_PATH=$NETCDF/lib:$PNETCDF/lib:$PIO/lib64:$LD_LIBRARY_PATH
-
 
 # --- Others Variables ---
 # HPE Slingshot/Libfabric:

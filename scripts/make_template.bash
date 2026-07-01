@@ -23,7 +23,7 @@ then
    echo ""
    echo "${0} ]EXP_NAME/OP] RESOLUTION LABELI FCST"
    echo ""
-   echo "EXP_NAME    :: Forcing: GFS"
+   echo "EXP_NAME    :: Forcing: GFS or ERA5"
    echo "RESOLUTION  :: number of points in resolution model grid, e.g: 1024002  (24 km)"
    echo "LABELI      :: Initial date YYYYMMDDHH, e.g.: 2024010100"
    echo "FCST        :: Forecast hours, e.g.: 24 or 36, etc."
@@ -89,92 +89,6 @@ cd ${DIRRUN}
 IFS=":" read -r h m s <<< "${t_strout}"
 printf -v t_strout "%02d:%02d:%02d" "$h" "$m" "$s"
 
-# Calculating default parameters for different resolutions
-if [[ $MODERUN == "G" ]]; then
-   if [ $RES -eq 40962 ]; then  #120Km
-      NLAT=151 #180/1.2
-      NLON=301 #360/1.2
-      STARTLAT=-90.0
-      STARTLON=0.0
-      ENDLAT=90.0
-      ENDLON=360.0
-   elif [ $RES -eq 163842 ]; then  #60Km
-      NLAT=301 #180/0.6
-      NLON=601 #360/0.6
-      STARTLAT=-90.0
-      STARTLON=0.0
-      ENDLAT=90.0
-      ENDLON=360.0
-   elif [ $RES -eq 655362 ]; then  #30Km
-      NLAT=601 #180/0.3
-      NLON=1201 #360/0.3
-      STARTLAT=-90.0
-      STARTLON=0.0
-      ENDLAT=90.0
-      ENDLON=360.0
-   elif [ $RES -eq 1024002 ]; then  #24Km
-      NLAT=721  #180/0.25
-      NLON=1441 #360/0.25
-      STARTLAT=-90.0
-      STARTLON=0.0
-      ENDLAT=90.0
-      ENDLON=360.0
-   elif [ $RES -eq 2621442 ]; then  #15Km
-      NLAT=1201 #180/0.15
-      NLON=2401 #360/0.15
-      STARTLAT=-90.0
-      STARTLON=0.0
-      ENDLAT=90.0
-      ENDLON=360.0
-   elif [ $RES -eq 5898242 ]; then  #10Km
-      NLAT=1801 #180/0.10 (+1)
-      NLON=3601 #360/0.10 (+1)
-      STARTLAT=-90.0
-      STARTLON=0.0
-      ENDLAT=90.0
-      ENDLON=360.0
-   elif [ $RES -eq 23592962 ]; then  #5Km
-      NLAT=3601 #180/0.05
-      NLON=7201 #360/0.05
-      STARTLAT=-90.0
-      STARTLON=0.0
-      ENDLAT=90.0
-      ENDLON=360.0
-   elif [ $RES -eq 65536002 ]; then  #3Km
-      NLAT=6001 #180/0.03 
-      NLON=12001 #360/0.03 
-      STARTLAT=-90.0
-      STARTLON=0.0
-      ENDLAT=90.0
-      ENDLON=360.0
-   fi
-elif [[ $MODERUN == "R" ]]; then
-   if [[ "$RES" == "655362.REG.AMS_CAR" ]]; then #30 km (AMS + Caribe)
-      NLAT=368     #110/0.3 +1
-      NLON=334     #100/0.3 +1
-      STARTLAT=-65.0
-      ENDLAT=40
-      STARTLON=240.0
-      ENDLON=340.0
-   elif [[ $RES == "5898242.REG.AMS_CAR" ]]; then #10 km (AMS + Caribe)
-      NLAT=1101   #110/0.1 + 1
-      NLON=1001   #100/0.1 + 1
-      STARTLAT=-70.0
-      ENDLAT=40.0
-      STARTLON=240.0
-      ENDLON=340.0
-   elif [[ $RES == "23592962.REG.AMS_CAR" ]]; then #5 km (AMS + Caribe)
-      NLAT=2201    #110/0.05 + 1
-      NLON=2001    #100/0.05 + 1
-      STARTLAT=-70.0
-      ENDLAT=40.0
-      STARTLON=240.0
-      ENDLON=340.0   
-   fi
-fi
-
-#-------------------------------------------------------
-
 # NLEVS get from t_iso_levels in Registry_isobaric.xml:
 if [ -s ${MONANDIR}/src/core_atmosphere/diagnostics/Registry_isobaric.xml ]
 then
@@ -186,9 +100,20 @@ fi
 output_interval=${t_strouthor}
 nfiles=$(echo "$FCST/$output_interval + 1" | bc)
 
-diag_name_post=MONAN_DIAG_G_POS_${EXP}_${YYYYMMDDHHi}_${YYYYMMDDHHi}.00.00.x${RES}L${N_MODEL_LEV}.nc
-diag_name_templ=MONAN_DIAG_G_POS_${EXP}_${YYYYMMDDHHi}_%y4%m2%d2%h2.%n2.00.x${RES}L${N_MODEL_LEV}.nc
+# Definindo G ou R no MONAN_DIAG
+if [[ $MODERUN == "R" ]]; then
+   RORG=R
+elif [[ $MODERUN == "G" ]]; then
+   RORG=G
+else
+   echo -e  "\n${RED}==>${NC} ***** ATTENTION *****\n"
+   echo -e  "${RED}==>${NC} Make post template phase fails! Please select MODERUN=R (Regional) or MODERUN=G (Global) in 'setenv.bash'.\n"
+   echo -e  "${RED}==>${NC} Exiting script. \n"
+   exit -1
+fi
 
+diag_name_post=MONAN_DIAG_${RORG}_POS_${EXP}_${YYYYMMDDHHi}_${YYYYMMDDHHi}.00.00.x${RES}L${N_MODEL_LEV}.nc
+diag_name_templ=MONAN_DIAG_${RORG}_POS_${EXP}_${YYYYMMDDHHi}_%y4%m2%d2%h2.%n2.00.x${RES}L${N_MODEL_LEV}.nc
 
 
 rm -fr ${DIRRUN}/qctlinfo.gs

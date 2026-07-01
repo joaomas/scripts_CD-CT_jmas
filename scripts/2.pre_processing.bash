@@ -94,7 +94,7 @@ then
 fi
 
 # Creating the x1.${RES}.static.nc file once, if does not exist yet:---------------
-if [[ $EXP == "GFS" || $EXP == "ERA5" ]]; then
+if [[ ${EXP} == "GFS" || ${EXP} == "ERA5" || ${EXP} == "ERA" ]]; then
    if [ ! -s ${DATAIN}/fixed/x1.${RES}.static.nc ]
    then
       echo -e "${GREEN}==>${NC} Creating static.bash for submiting init_atmosphere to create x1.${RES}.static.nc...\n"
@@ -116,7 +116,7 @@ if [[ ${EXP} == "GFS" ]]
 then
    echo -e  "${GREEN}==>${NC} Submitting Degrib for GFS data...\n"
    time ./make_degrib_GFS.bash ${EXP} ${RES} ${YYYYMMDDHHi} ${FCST}
-elif [[ ${EXP} == "ERA5" ]]
+elif [[ ${EXP} == "ERA5" || ${EXP} == "ERA" ]]
 then
    echo -e  "${GREEN}==>${NC} Submitting Degrib for ERA5 data...\n"
    time ./make_degrib_ERA5.bash ${EXP} ${RES} ${YYYYMMDDHHi} ${FCST}
@@ -129,7 +129,7 @@ fi
 #----------------------------------------------------------------------------------
 
 # Init Atmosphere phase:------------------------------------------------------------
-if [[ $EXP == "GFS" || $EXP == "ERA5" ]]; then   
+if [[ ${EXP} == "GFS" || ${EXP} == "ERA5" || ${EXP} == "ERA" ]]; then
    echo -e  "${GREEN}==>${NC} Submitting Init Atmosphere for real case...\n"
    time ./make_initatmos.bash ${EXP} ${RES} ${YYYYMMDDHHi} ${FCST}
 else
