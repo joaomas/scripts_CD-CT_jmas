@@ -8,7 +8,7 @@ then
    echo ""
    echo "${0} EXP_NAME RESOLUTION LABELI FCST"
    echo ""
-   echo "EXP_NAME    :: Forcing: GFS or ERA5"
+   echo "EXP_NAME    :: Forcing: GFS or ERA"
    echo "            :: Others options to be added later..."
    echo "RESOLUTION  :: number of points in resolution model grid, e.g: 1024002  (24 km)"
    echo "LABELI      :: Initial date YYYYMMDDHH, e.g.: 2024010100"

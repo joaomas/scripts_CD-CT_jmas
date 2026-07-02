@@ -23,7 +23,7 @@ then
    echo ""
    echo "${0} [EXP_NAME/OP] RESOLUTION LABELI FCST"
    echo ""
-   echo "EXP_NAME    :: Forcing: GFS or ERA5"
+   echo "EXP_NAME    :: Forcing: GFS or ERA"
    echo "RESOLUTION  :: number of points in resolution model grid, e.g: 1024002  (24 km)"
    echo "LABELI      :: Initial date YYYYMMDDHH, e.g.: 2024010100"
    echo "FCST        :: Forecast hours, e.g.: 24 or 36, etc."
@@ -192,7 +192,7 @@ cp -f ${DATAIN}/fixed/Vtable.${EXP} ${DIRRUN}
 if [[ $MODERUN == "R" ]]; then
    cp -f ${DATAOUT}/${YYYYMMDDHHi}/Pre/lbc*.nc ${DIRRUN}
 fi
-if [[ ${EXP} == "GFS" ||  ${EXP} == "ERA5" || ${EXP} == "ERA" ]]
+if [[ ${EXP} == "GFS" ||  ${EXP} == "ERA" ]]
 then
    sed -e "s,#LABELI#,${start_date},g;s,#FCSTS#,${DD_HHMMSS_forecast},g;s,#RES#,${RES},g;
 s,#CONFIG_DT#,${CONFIG_DT},g;s,#CONFIG_LEN_DISP#,${CONFIG_LEN_DISP},g;s,#CONFIG_CONV_INTERVAL#,${CONFIG_CONV_INTERVAL},g;s,#APPLY_LBCS#,${APPLY_LBCS},g" \

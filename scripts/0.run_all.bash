@@ -44,7 +44,7 @@ convertmpas_branch=1.2.0
 EXP=GFS                    #Options - GFS or ERA
 RES=1024002                #Options - Global: 40962=120km; 163842=60km; 655362=30Km; 1024002=24km; 2621442=15Km; 5898242=10Km
                            #Options - Regional: 655362.REG.AMS_CAR=30km; 5898242.REG.AMS_CAR=10km; 23592962.REG.AMS_CAR=5km
-YYYYMMDDHHi=2026012000     #Check dates disponible for the initial condition (CI) using ERA5
+YYYYMMDDHHi=2026070100     #Check dates disponible for the initial condition (CI) using ERA5
 FCST=24
 #----------------------------------------------------------------------
 
