@@ -2,6 +2,11 @@
 
 ## History
 
+**Develop**
+
+- New functionality for Regional simulations.
+- Option to use ERA5 data as an initial condition.
+
 **1.4.0**
 - Compatibility with MONAN 1.4.3-rc.
 - Support for multi-environment: 'Jaci' supercomputer (intel and gnu compilers and PBS scheduler) and 'Egeon' cluster (gnu compiler and SLURM scheduler).
